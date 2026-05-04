@@ -1,7 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, type ApiUser } from "@/lib/api";
 import { useState } from "react";
-import { Users, Search, Shield, Slash, Star, Trash2, RefreshCw } from "lucide-react";
+import { Users, Search, Shield, Slash, Star, Trash2, RefreshCw, Key, Copy, Check } from "lucide-react";
+
+function generatePassword(length = 12): string {
+  const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$";
+  let pw = "";
+  for (let i = 0; i < length; i++) pw += chars[Math.floor(Math.random() * chars.length)];
+  return pw;
+}
 
 function Badge({ text, color }: { text: string; color: string }) {
   return (
@@ -9,6 +16,48 @@ function Badge({ text, color }: { text: string; color: string }) {
       style={{ color, borderColor: color + "50", background: color + "18" }}>
       {text}
     </span>
+  );
+}
+
+function PasswordGenerator() {
+  const [pw, setPw] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const generate = () => { setPw(generatePassword()); setCopied(false); };
+  const copy = () => {
+    navigator.clipboard.writeText(pw);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Key size={14} className="text-primary" />
+        <span className="text-xs font-bold tracking-widest text-muted-foreground">GENERATE PASSWORD USER</span>
+      </div>
+      <div className="flex gap-2">
+        <div className="flex-1 bg-secondary border border-border rounded-lg px-3 py-2.5 font-mono text-sm text-foreground min-h-[40px] flex items-center">
+          {pw || <span className="text-muted-foreground text-xs">Klik Generate...</span>}
+        </div>
+        {pw && (
+          <button onClick={copy} className="px-3 rounded-lg border border-border hover:border-primary/40 transition-colors">
+            {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} className="text-muted-foreground" />}
+          </button>
+        )}
+        <button
+          onClick={generate}
+          className="px-4 rounded-lg bg-primary/15 border border-primary/30 text-primary text-xs font-bold hover:bg-primary/25 transition-colors whitespace-nowrap"
+        >
+          Generate
+        </button>
+      </div>
+      {pw && (
+        <p className="text-[11px] text-muted-foreground">
+          Berikan password ini ke user untuk login pertama kali.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -29,7 +78,7 @@ function UserRow({ user, onAction }: { user: ApiUser; onAction: (action: string,
             <p className="text-[11px] text-muted-foreground font-mono mt-0.5 truncate">{user.hwid}</p>
             <div className="flex gap-4 mt-1.5">
               <span className="text-[11px] text-muted-foreground">
-                Login terakhir: <span className="text-foreground/60">{new Date(user.lastSeen).toLocaleDateString("id-ID")}</span>
+                Terakhir: <span className="text-foreground/60">{new Date(user.lastSeen).toLocaleDateString("id-ID")}</span>
               </span>
               {user.detectionCount > 0 && (
                 <span className="text-[11px] text-red-400">⚠ {user.detectionCount} ancaman</span>
@@ -38,32 +87,19 @@ function UserRow({ user, onAction }: { user: ApiUser; onAction: (action: string,
           </div>
         </div>
       </div>
-
       <div className="flex border-t border-border">
-        <button
-          onClick={() => onAction(user.banned ? "unban" : "ban", user.id)}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
-            user.banned
-              ? "text-green-400 hover:bg-green-400/10"
-              : "text-red-400 hover:bg-red-400/10"
-          }`}
-        >
-          <Slash size={12} />
-          {user.banned ? "Unban" : "Ban"}
+        <button onClick={() => onAction(user.banned ? "unban" : "ban", user.id)}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${user.banned ? "text-green-400 hover:bg-green-400/10" : "text-red-400 hover:bg-red-400/10"}`}>
+          <Slash size={12} />{user.banned ? "Unban" : "Ban"}
         </button>
         {user.role !== "admin" && (
-          <button
-            onClick={() => onAction("promote", user.id)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-yellow-400 hover:bg-yellow-400/10 transition-colors border-l border-border"
-          >
-            <Star size={12} />
-            Promote
+          <button onClick={() => onAction("promote", user.id)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-yellow-400 hover:bg-yellow-400/10 transition-colors border-l border-border">
+            <Star size={12} />Promote
           </button>
         )}
-        <button
-          onClick={() => onAction("delete", user.id)}
-          className="px-4 flex items-center justify-center py-2.5 text-xs font-semibold text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors border-l border-border"
-        >
+        <button onClick={() => onAction("delete", user.id)}
+          className="px-4 flex items-center justify-center py-2.5 text-xs text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors border-l border-border">
           <Trash2 size={12} />
         </button>
       </div>
@@ -76,9 +112,7 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["users"],
-    queryFn: api.getUsers,
-    refetchInterval: 10000,
+    queryKey: ["users"], queryFn: api.getUsers, refetchInterval: 10000,
   });
 
   const banMut = useMutation({ mutationFn: api.banUser, onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }) });
@@ -90,20 +124,14 @@ export default function UsersPage() {
     if (action === "ban") banMut.mutate(id);
     else if (action === "unban") unbanMut.mutate(id);
     else if (action === "promote") promoteMut.mutate(id);
-    else if (action === "delete") {
-      if (window.confirm("Hapus user ini secara permanen?")) deleteMut.mutate(id);
-    }
+    else if (action === "delete" && window.confirm("Hapus user ini secara permanen?")) deleteMut.mutate(id);
   };
 
   const users = data?.users ?? [];
-  const filtered = users.filter(
-    (u) =>
-      u.username.toLowerCase().includes(search.toLowerCase()) ||
-      u.hwid.toLowerCase().includes(search.toLowerCase())
+  const filtered = users.filter((u) =>
+    u.username.toLowerCase().includes(search.toLowerCase()) ||
+    u.hwid.toLowerCase().includes(search.toLowerCase())
   );
-
-  const totalBanned = users.filter((u) => u.banned).length;
-  const totalAdmin = users.filter((u) => u.role === "admin").length;
 
   return (
     <div className="p-6 space-y-5">
@@ -111,25 +139,22 @@ export default function UsersPage() {
         <div>
           <h1 className="text-xl font-bold tracking-widest text-foreground">MANAJEMEN USER</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {users.length} user · {totalAdmin} admin · {totalBanned} diblokir
+            {users.length} user · {users.filter((u) => u.role === "admin").length} admin · {users.filter((u) => u.banned).length} diblokir
           </p>
         </div>
-        <button
-          onClick={() => qc.invalidateQueries({ queryKey: ["users"] })}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-        >
+        <button onClick={() => qc.invalidateQueries({ queryKey: ["users"] })}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
           <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
         </button>
       </div>
 
+      <PasswordGenerator />
+
       <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2.5 bg-card">
         <Search size={14} className="text-muted-foreground shrink-0" />
-        <input
-          className="bg-transparent text-sm text-foreground flex-1 outline-none placeholder:text-muted-foreground"
+        <input className="bg-transparent text-sm text-foreground flex-1 outline-none placeholder:text-muted-foreground"
           placeholder="Cari username atau HWID..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+          value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
       {isLoading ? (

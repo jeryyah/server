@@ -1,3 +1,5 @@
+import { getToken } from "./auth";
+
 const BASE = "/api";
 
 export interface ApiEvent {
@@ -30,16 +32,21 @@ export interface ApiStats {
   criticalEvents: number;
   highEvents: number;
   eventsLast24h: number;
+  onlineDevices: number;
   bySeverity: { low: number; medium: number; high: number; critical: number };
   hourlyActivity: { hour: string; count: number }[];
   topThreats: { name: string; count: number }[];
 }
 
+function headers() {
+  return {
+    "Content-Type": "application/json",
+    "x-panel-token": getToken() ?? "",
+  };
+}
+
 async function request<T>(url: string, opts?: RequestInit): Promise<T> {
-  const res = await fetch(BASE + url, {
-    headers: { "Content-Type": "application/json" },
-    ...opts,
-  });
+  const res = await fetch(BASE + url, { headers: headers(), ...opts });
   if (!res.ok) throw new Error(`API error ${res.status}`);
   return res.json() as Promise<T>;
 }
@@ -60,4 +67,5 @@ export const api = {
   unbanUser: (id: string) => request(`/users/${id}/unban`, { method: "PUT" }),
   promoteUser: (id: string) => request(`/users/${id}/promote`, { method: "PUT" }),
   deleteUser: (id: string) => request(`/users/${id}`, { method: "DELETE" }),
+  getDevices: () => request<{ devices: unknown[] }>("/devices"),
 };

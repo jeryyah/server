@@ -1,14 +1,23 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ListFilter, Users, Shield } from "lucide-react";
+import { LayoutDashboard, ListFilter, Users, Shield, Monitor, LogOut } from "lucide-react";
+import { logoutPanel } from "@/lib/auth";
 
 const NAV = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/devices", icon: Monitor, label: "Device Monitor" },
   { href: "/events", icon: ListFilter, label: "Log Deteksi" },
   { href: "/users", icon: Users, label: "Manajemen User" },
 ];
 
-export default function Sidebar() {
+interface Props { onLogout: () => void; }
+
+export default function Sidebar({ onLogout }: Props) {
   const [location] = useLocation();
+
+  const handleLogout = async () => {
+    await logoutPanel();
+    onLogout();
+  };
 
   return (
     <aside className="w-56 shrink-0 border-r border-border bg-card flex flex-col min-h-screen">
@@ -40,11 +49,18 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="px-5 py-4 border-t border-border">
-        <div className="flex items-center gap-2">
+      <div className="px-3 py-4 border-t border-border space-y-3">
+        <div className="flex items-center gap-2 px-3">
           <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-[11px] text-muted-foreground">Live • Auto-refresh 10s</span>
+          <span className="text-[11px] text-muted-foreground">Live • Auto-refresh 6s</span>
         </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors"
+        >
+          <LogOut size={14} />
+          Logout Panel
+        </button>
       </div>
     </aside>
   );
