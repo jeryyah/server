@@ -1,22 +1,29 @@
 {
   "expo": {
-    "name": "Anti-Cheat App",
+    "name": "Anti-Cheat",
     "slug": "anticheat-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "anticheat-app",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#080C14"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.anticheat.app"
     },
-    "android": {},
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#080C14"
+      },
+      "package": "com.anticheat.app"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
