@@ -18,6 +18,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { DetectionProvider } from "@/context/DetectionContext";
 import { AdminProvider } from "@/context/AdminContext";
 import { SettingsProvider } from "@/context/SettingsContext";
+import { SessionKeyProvider } from "@/context/SessionKeyContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -31,7 +32,7 @@ function RootLayoutNav() {
       if (!user) {
         router.replace("/login");
       } else {
-        router.replace("/(tabs)/");
+        router.replace("/key-auth");
       }
     }
   }, [user, isLoading]);
@@ -39,6 +40,7 @@ function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="key-auth" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
   );
@@ -68,11 +70,13 @@ export default function RootLayout() {
             <KeyboardProvider>
               <SettingsProvider>
                 <AuthProvider>
-                  <DetectionProvider>
-                    <AdminProvider>
-                      <RootLayoutNav />
-                    </AdminProvider>
-                  </DetectionProvider>
+                  <SessionKeyProvider>
+                    <DetectionProvider>
+                      <AdminProvider>
+                        <RootLayoutNav />
+                      </AdminProvider>
+                    </DetectionProvider>
+                  </SessionKeyProvider>
                 </AuthProvider>
               </SettingsProvider>
             </KeyboardProvider>

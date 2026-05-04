@@ -39,7 +39,7 @@ export default function LoginScreen() {
     const result = await login(username.trim(), password, discordWebhook.trim() || undefined);
     setIsLoading(false);
     if (result.success) {
-      router.replace("/(tabs)/");
+      router.replace("/key-auth");
     } else {
       setError(result.error ?? "Login gagal.");
     }
