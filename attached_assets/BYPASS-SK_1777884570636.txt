@@ -1,0 +1,77 @@
+DETEC PANEL/SCRIPT/INJECTOR/APKMOD
+DETEC ALL CODE SCRIPT TANAM/HIDE
+DETEC STREAMER PANEL/INJECTOR DISABLE ALL LOCALHOST
+SCREEN MONITORING VIA ANTICHEAT 
+AUTOMATIC REMOVE AUTORUN PANEL PC
+DETEKSI ROOT ANDROID/PC/EMULATOR 
+
+Untuk PC (Windows)
+​Fokus utama di PC adalah memblokir External Injector dan Memory Scanner.
+​Kernel-Level Driver (Ring 0): Ini adalah standar emas. Anti-cheat Anda harus berjalan sebagai driver sistem untuk memantau proses lain yang mencoba "menyentuh" memori game Anda.
+​MTP (Module Tampering Protection): Mendeteksi jika ada file .dll asing yang mencoba memuat dirinya (DLL Injection) ke dalam aplikasi Anda.
+​VMT (Virtual Method Table) Hook Detection: Memastikan fungsi asli aplikasi tidak dibelokkan oleh skrip pihak ketiga.
+​Blocked Process List: Secara otomatis menutup aplikasi jika mendeteksi proses seperti Cheat Engine, Process Hacker, atau x64dbg aktif di latar belakang.
+
+Untuk Android (Root & No-Root)
+Android sangat rawan karena adanya aplikasi seperti Game Guardian dan LuluBox.
+Anti-Zygisk/Magisk (Root): Jika perangkat di-root, sistem harus mampu mendeteksi modul Magisk yang mencoba menyembunyikan status root (Hide Root).
+Virtual Environment Detection (No-Root): Banyak cheater menggunakan aplikasi "Parallel Space" atau "Virtual Run" untuk menjalankan injector tanpa root. Sistem Anda harus mendeteksi jika aplikasi berjalan di dalam lingkungan virtual.
+Signature Verification: Memeriksa apakah tanda tangan digital (signature) APK sudah berubah. Jika sudah di-mod (APKMod), signature-nya pasti berbeda dari yang asli.
+JNI (Java Native Interface) Protection: Pindahkan logika keamanan dari bahasa Java/Kotlin ke C++ (Native) agar lebih sulit didekompilasi oleh pemula.
+
+Untuk iOS (Jailbreak & Non-Jailbreak)
+Keamanan iOS jauh lebih ketat, namun tetap bisa ditembus jika perangkat di-jailbreak.
+Jailbreak Detection: Memeriksa keberadaan file sistem seperti /Applications/Cydia.app atau /usr/sbin/sshd.
+Dylib Injection Detection: Mendeteksi adanya dynamic library (.dylib) ilegal yang disuntikkan ke dalam paket aplikasi (.ipa).
+Entitlement Checking: Memastikan aplikasi hanya berjalan dengan izin yang telah Anda tentukan saat proses build.
+
+Encrypted Communication Mengenkripsi data antara aplikasi dan panel (Pterodactyl/Replit) agar tidak bisa di-sniff oleh HTTP Canary atau Burp Suite.
+Time-Sync Validation Mencegah Speedhack dengan cara mencocokkan waktu di perangkat dengan waktu di server secara berkala.
+Multi-Factor HWID Mengunci akses berdasarkan ID perangkat yang unik, sehingga jika satu akun di-ban, perangkat tersebut tidak bisa membuat akun baru.
+Blacklist IP/VPN Memblokir akses jika pengguna menggunakan VPN atau Proxy yang sering digunakan untuk menghindari IP Ban.
+
+1. AI-Driven Mouse/Touch Path Analysis (Behavioral Bio)
+Fitur: Rekam koordinat sentuhan layar (X, Y) dalam milidetik.
+Deteksi: Manusia memiliki micro-shaking (getaran kecil). Jika gerakan kursor berpindah dari titik A ke B secara linear sempurna (garis lurus) atau instan tanpa kurva akselerasi, sistem akan menandainya sebagai Auto-Aim. Garena jarang mendeteksi pola gerakan, mereka lebih fokus pada perubahan memori.
+
+Side-Channel Power & Thermal Analysis
+Fitur: Pantau lonjakan penggunaan CPU dan suhu baterai saat fitur tertentu aktif.
+Deteksi: Skrip injector atau ESP yang berjalan di latar belakang (background) mengonsumsi daya tambahan. Jika ada aktivitas pemrosesan data tinggi yang tidak sesuai dengan aset game yang sedang dimuat, itu adalah indikasi kuat adanya proses ilegal (Silent Injector).
+
+Deception/Honey-Pot Memory Addresses
+Fitur: Buat alamat memori palsu (dummy) yang dinamai mirip dengan variabel penting, misalnya Player_Health_Actual (palsu) dan Obfuscated_Var_99 (asli).
+Deteksi: Jika ada aplikasi luar yang mencoba mengubah nilai di Player_Health_Actual, sistem langsung melakukan Insta-Ban. Ini membuktikan ada memory scanner (seperti GameGuardian) yang sedang mencari nilai nyawa.
+
+Kernel-Level "Deep Scan" pada Driver Mouse/Keyboard (PC)
+Fitur: Verifikasi Hardware Signature dari input perangkat.
+Deteksi: Jika sistem mendeteksi input "Mouse" tetapi berasal dari port serial/USB yang teridentifikasi sebagai pengontrol mikro (Arduino), langsung blokir. Garena sering kecolongan oleh cheat berbasis hardware eksternal ini.
+
+Screen Byte-Pattern Analysis (Anti-ESP)
+Fitur: Secara acak, sistem membaca nilai warna pada pixel tertentu di layar yang seharusnya transparan atau hitam.
+Deteksi: Jika terdeteksi ada warna cerah (biasanya garis ESP berwarna hijau/merah) di koordinat yang seharusnya kosong, berarti ada overlay ilegal. Teknik ini lebih kuat daripada sekadar mendeteksi nama proses.
+
+Network Latency Jitter Analysis
+Fitur: Mengukur konsistensi pengiriman paket data kecil.
+Deteksi: Script seperti "Antena" atau "Wallhack" sering kali memodifikasi paket data agar posisi musuh terlihat. Modifikasi ini biasanya menyebabkan jitter (ketidakteraturan) pada ping. Jika ping stabil tapi jitter tinggi, ada manipulasi data di tingkat paket.
+
+Encrypted "Heartbeat" dengan Token Dinamis
+Fitur: Setiap 30 detik, server mengirimkan "tantangan" matematika unik ke aplikasi.
+Deteksi: Aplikasi harus menjawab tantangan tersebut menggunakan logika yang tertanam di bagian kode yang paling dalam (obfuscated). Jika jawaban salah atau terlambat, berarti modul keamanan telah di-bypass atau dimatikan oleh cheater.
+
+. Execution Flow Integrity (EFI)
+Ini adalah teknik untuk mendeteksi bypass pada fungsi anti-cheat.
+Cara Kerja: Tanamkan beberapa "pos pemeriksaan" di dalam alur logika game. Misalnya: Fungsi A harus memanggil Fungsi B dalam waktu kurang dari 5ms.
+Efek: Jika cheater mencoba mematikan (disable) fungsi anti-cheat Anda, alur logika ini akan terputus. Sistem akan mendeteksi bahwa ada fungsi yang "hilang" atau tidak terpanggil, lalu otomatis memutus koneksi ke server.
+
+Virtual File System (VFS) Masking
+Menyembunyikan file asli agar tidak bisa di-scan oleh injector atau file manager di Android root.
+Cara Kerja: Enkripsi seluruh file aset game dan hanya dekripsi di dalam RAM (memori) saat dibutuhkan menggunakan kunci dari server.
+Efek: Saat cheater mencoba mencari file .obb atau .json untuk di-edit (seperti script antena), mereka hanya akan menemukan file sampah yang sudah terenkripsi.
+
+Anti-Debugging via Timing Check
+Mendeteksi jika cheater sedang menggunakan aplikasi seperti x64dbg atau GDB.
+Cara Kerja: Jalankan operasi matematika rumit di latar belakang dan hitung waktu eksekusinya.
+Efek: Jika ada debugger aktif, proses CPU akan melambat secara mikro. Jika waktu eksekusi melampaui batas normal (misal >10ms), itu tandanya aplikasi sedang di-"intip" oleh program luar.
+
+dan saya mau jika ada deteksi login otomatis di kirim lewat discord 
+user harus download aplikasi sistem anticheat baru login dan fitur tambahan itu aplikasi bisa melihat dengan jelas atau merekam aktifitas secara live kalo mau hapus aplikasi harus minta akses ke admin atau Developer anticheat 
